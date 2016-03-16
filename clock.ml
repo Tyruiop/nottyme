@@ -129,12 +129,12 @@ let wtarget_to_target ctw =
     in
     let m =
         if ctwas >= 4 then ctwa.(ctwas - 4)*10 + ctwa.(ctwas - 3)
-        else if ctwas > 2 then ctwa.(2)
+        else if ctwas = 3 then ctwa.(0)
         else 0
     in
     let h =
         if ctwas >= 6 then ctwa.(ctwas - 6)*10 + ctwa.(ctwas - 5)
-        else if ctwas = 5 then ctwa.(4)
+        else if ctwas = 5 then ctwa.(0)
         else 0
     in
     (h, m, s)
