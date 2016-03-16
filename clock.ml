@@ -114,31 +114,54 @@ let trigger_countdown ct =
     let t = int_of_float (Unix.time ()) in
     ct.status <- On;
     ct.start <- t;
+    ct.wtarget <- [];
     ct.target <- t + ct.target
 
 let rec ( ** ) n = function
     | 0 -> 1
     | m -> if m < 0 then 1 else n * (( ** ) n (m - 1))
 
-let write_countdown ct =
-    let rec wc l p = match l with
-        | []    -> 0
-        | n::ll -> n * (10 ** p) + wc ll (p + 1)
+let wtarget_to_target ctw =
+    let ctwa = Array.of_list (List.rev ctw) in
+    let ctwas = Array.length ctwa in
+    let s =
+        if ctwas >= 2 then ctwa.(ctwas - 2)*10 + ctwa.(ctwas - 1)
+        else if ctwas = 1 then ctwa.(0)
+        else 0
     in
-    let (h,m,s) = format_h (wc ct.wtarget 1) in
-    (string_of_int h) ^ ":" ^ (string_of_int m) ^ ":" ^ (string_of_int s)
+    let m =
+        if ctwas >= 4 then ctwa.(ctwas - 4)*10 + ctwa.(ctwas - 3)
+        else if ctwas = 3 then ctwa.(2)
+        else 0
+    in
+    let h =
+        if ctwas >= 6 then ctwa.(ctwas - 6)*10 + ctwa.(ctwas - 5)
+        else if ctwas = 5 then ctwa.(4)
+        else 0
+    in
+    (h, m, s)
+
+let write_countdown ct =
+    let (h,m,s) = wtarget_to_target ct.wtarget in
+    let hs = if h < 10 then "0" ^ string_of_int h else string_of_int h in
+    let ms = if m < 10 then "0" ^ string_of_int m else string_of_int m in
+    let ss = if s < 10 then "0" ^ string_of_int s else string_of_int s in
+    hs ^ ":" ^ ms ^ ":" ^ ss
 
 let display_status t ct x y =
     let open Primitives in
     match ct.status with
     | Off -> I.(hline 28 x y </> draw_text "00:00:00" (x + 29) y)
     | Writing -> I.(hline 28 x y </> draw_text (write_countdown ct) (x + 29) y)
-    | On -> let cur = (int_of_float t) - ct.target in
+    | On -> let cur = ct.target - (int_of_float t) in
             let (h, m, s) = format_h cur in
-            let l = ((float_of_int ct.start) -. t) /. (float_of_int (ct.start - ct.target)) in
+            let l = ((float_of_int ct.target) -. t) /. (float_of_int (ct.target - ct.start)) in
             let n_s = int_of_float (28.0 *. l) in
-            let ts = String.concat "" [string_of_int h; ":"; string_of_int m; ":"; string_of_int s] in
-            I.(hline n_s x y </> draw_text ts (x + 29) y)
+            let hs = if h < 10 then "0" ^ string_of_int h else string_of_int h in
+            let ms = if m < 10 then "0" ^ string_of_int m else string_of_int m in
+            let ss = if s < 10 then "0" ^ string_of_int s else string_of_int s in
+            let fs = String.concat "" [hs; ":"; ms; ":"; ss] in
+            I.(hline n_s x y </> draw_text fs (x + 29) y)
 
 let update_status ct x y = match ct.status with
     | Off -> display_status (-1.0) ct x y
@@ -166,15 +189,46 @@ let render term c ct =
     let ict = update_status ct c.x (c.y + 8) in
     Term.image term I.(ic </> ict)
 
+let input c ct = function
+    | 99 -> let f = function
+                | Off -> Writing
+                | Writing ->
+                        let (h, m, s) = wtarget_to_target ct.wtarget in
+                        ct.target <- h*3600 + m*60 + s; trigger_countdown ct;
+                        On
+                | On -> Off
+        in
+        ct.status <- f ct.status
+    | _ -> ()
+
 let rec loop term c ct (e, t) =
     (e <?> t) >>= function
         | `End | `Key (`Enter, _) -> Lwt.return_unit
+        | `Key (`Uchar u, _) ->
+                (match u with
+                    | 99 -> let f = function
+                            | Off -> Writing
+                            | Writing ->
+                                let (h, m, s) = wtarget_to_target ct.wtarget in
+                                ct.target <- h*3600 + m*60 + s; trigger_countdown ct;
+                                On
+                            | On -> Off
+                        in
+                        ct.status <- f ct.status
+                    | 48 | 49 | 50 | 51 | 52 | 53 | 54 | 55 | 56 | 57 ->
+                            if ct.status = Writing then ct.wtarget <- (u - 48) :: ct.wtarget
+                    | _ -> ()
+                );
+                render term c ct >>= fun() ->
+                    loop term c ct (event term, timer ())
         | `Timer ->
-            render term c ct >>= fun () -> loop term c ct (e, timer ())
+            render term c ct >>= fun () ->
+                loop term c ct (e, timer ())
         | `Resize dim ->
             let w, h = Term.size term in
             c.x <- w; c.y <- h;
-            render term c ct >>= fun () -> loop term c ct (event term, timer ())
+            render term c ct >>= fun () ->
+                loop term c ct (event term, timer ())
         | _ -> loop term c ct (event term, timer ())
 
 let main () =
