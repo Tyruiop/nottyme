@@ -4,8 +4,6 @@ open Lwt.Infix
 
 let square = "\xe2\x96\x88"
 let delay = Some 1.0
-let wx = ref 0
-let wy = ref 0
 
 let sign n =
     if n > 0 then 1 else if n < 0 then -1 else 0
@@ -84,8 +82,8 @@ type clock = {
 }
 
 let init_clock term =
-    let wx, wy = Term.size term in
-    { x = (wx - 38)/2; y = (wy - 7)/2; }
+    let w, h = Term.size term in
+    { x = (w - 38)/2; y = (h - 7)/2; }
 
 let update_clock c w h =
     c.x <- (w - 38)/2;
@@ -131,7 +129,7 @@ let wtarget_to_target ctw =
     in
     let m =
         if ctwas >= 4 then ctwa.(ctwas - 4)*10 + ctwa.(ctwas - 3)
-        else if ctwas = 3 then ctwa.(2)
+        else if ctwas > 2 then ctwa.(2)
         else 0
     in
     let h =
@@ -212,7 +210,7 @@ let rec loop term c ct (e, t) =
                                 let (h, m, s) = wtarget_to_target ct.wtarget in
                                 ct.target <- h*3600 + m*60 + s; trigger_countdown ct;
                                 On
-                            | On -> Off
+                            | On -> ct.wtarget <- []; Off
                         in
                         ct.status <- f ct.status
                     | 48 | 49 | 50 | 51 | 52 | 53 | 54 | 55 | 56 | 57 ->
@@ -220,15 +218,15 @@ let rec loop term c ct (e, t) =
                     | _ -> ()
                 );
                 render term c ct >>= fun() ->
-                    loop term c ct (event term, timer ())
+                    loop term c ct (event term, t)
         | `Timer ->
             render term c ct >>= fun () ->
                 loop term c ct (e, timer ())
         | `Resize dim ->
             let w, h = Term.size term in
-            c.x <- w; c.y <- h;
+            c.x <- (w - 38)/2; c.y <- (h - 7)/2;
             render term c ct >>= fun () ->
-                loop term c ct (event term, timer ())
+                loop term c ct (event term, t)
         | _ -> loop term c ct (event term, timer ())
 
 let main () =
