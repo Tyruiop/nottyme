@@ -14,26 +14,26 @@ let rec makelist n v =
     | a -> v :: (makelist (a - 1) v)
 
 module Primitives : sig
-    val draw : int -> int -> Notty.image
-    val draw_text : string -> int -> int -> Notty.image
-    val hline : int -> int -> int -> Notty.image
-    val vline : int -> int -> int -> Notty.image
+    val draw : color:Notty.A.color -> int -> int -> Notty.image
+    val draw_text : color:Notty.A.color -> string -> int -> int -> Notty.image
+    val hline : color:Notty.A.color -> int -> int -> int -> Notty.image
+    val vline : color:Notty.A.color -> int -> int -> int -> Notty.image
 end = struct
-    let draw x y =
-        I.(string A.(fg green) square |> hpad x 0 |> vpad y 0)
+    let draw ~color x y =
+        I.(string A.(fg color) square |> hpad x 0 |> vpad y 0)
 
-    let draw_text s x y =
-        I.(string A.(fg green) s |> hpad x 0 |> vpad y 0)
+    let draw_text ~color s x y =
+        I.(string A.(fg color) s |> hpad x 0 |> vpad y 0)
 
-    let hline n x y =
+    let hline ~color n x y =
         let s = String.concat "" (makelist n square) in
-        I.(string A.(fg green) s |> hpad x 0 |> vpad y 0)
+        I.(string A.(fg color) s |> hpad x 0 |> vpad y 0)
 
-    let vline n x y =
+    let vline ~color n x y =
         let rec s_vline n x y =
             if n > 1 then
-                I.(s_vline (n - 1) x y <-> string A.(fg green) square)
-            else I.(string A.(fg green) square)
+                I.(s_vline (n - 1) x y <-> string A.(fg color) square)
+            else I.(string A.(fg color) square)
         in
         I.(s_vline n x y |> hpad x 0 |> vpad y 0)
 end
@@ -41,9 +41,10 @@ end
 module Numbers : sig
     type t
     val numbers : int -> t
-    val to_img : int -> int -> t -> Notty.image
+    val to_img : color:Notty.A.color -> int -> int -> t -> Notty.image
 end = struct
     open Primitives
+    open Notty.A
 
     type t = Zero | One | Two | Three | Four | Five | Six | Seven | Eight | Nine | Err | Dots
 
@@ -61,19 +62,19 @@ end = struct
         | -1 -> Dots
         | _ -> Err
 
-    let to_img x y = function
-        | Zero      -> I.(hline 4 x y </> vline 7 x y </> hline 4 x (y + 6) </> vline 7 (x + 3) y)
-        | One       -> I.(vline 7 (x + 3) y)
-        | Two       -> I.(hline 3 x y </> vline 4 (x + 3) y </> hline 4 x (y + 3) </> vline 4 x (y + 3) </> hline 4 x (y + 6))
-        | Three     -> I.(hline 3 x y </> vline 7 (x + 3) y </> hline 3 x (y + 3) </> hline 3 x (y + 6))
-        | Four      -> I.(vline 4 x y </> vline 7 (x + 3) y </> hline 3 x (y + 3))
-        | Five      -> I.(hline 4 x y </> vline 4 x y </> hline 3 x (y + 3) </> vline 4 (x + 3) (y + 3) </> hline 4 x (y + 6))
-        | Six       -> I.(hline 4 x y </> vline 7 x y </> vline 4 (x + 3) (y + 3) </> hline 4 x (y+3) </> hline 4 x (y + 6))
-        | Seven     -> I.(hline 4 x y </> vline 7 (x + 3) y)
-        | Eight     -> I.(hline 4 x y </> vline 7 x y </> vline 7 (x + 3) y </> hline 4 x (y + 3) </> hline 4 x (y + 6))
-        | Nine      -> I.(hline 4 x y </> vline 3 x y </> hline 4 x (y + 3) </> vline 7 (x + 3) y)
-        | Dots      -> I.(draw (x + 1) (y + 3) </> draw (x + 1) (y + 6))
-        | Err       -> I.(hline 4 x (y + 3))
+    let to_img ~color x y = function
+        | Zero      -> I.(hline color 4 x y </> vline color 7 x y </> hline color 4 x (y + 6) </> vline color 7 (x + 3) y)
+        | One       -> I.(vline color 7 (x + 3) y)
+        | Two       -> I.(hline color 3 x y </> vline color 4 (x + 3) y </> hline color 4 x (y + 3) </> vline color 4 x (y + 3) </> hline color 4 x (y + 6))
+        | Three     -> I.(hline color 3 x y </> vline color 7 (x + 3) y </> hline color 3 x (y + 3) </> hline color 3 x (y + 6))
+        | Four      -> I.(vline color 4 x y </> vline color 7 (x + 3) y </> hline color 3 x (y + 3))
+        | Five      -> I.(hline color 4 x y </> vline color 4 x y </> hline color 3 x (y + 3) </> vline color 4 (x + 3) (y + 3) </> hline color 4 x (y + 6))
+        | Six       -> I.(hline color 4 x y </> vline color 7 x y </> vline color 4 (x + 3) (y + 3) </> hline color 4 x (y+3) </> hline color 4 x (y + 6))
+        | Seven     -> I.(hline color 4 x y </> vline color 7 (x + 3) y)
+        | Eight     -> I.(hline color 4 x y </> vline color 7 x y </> vline color 7 (x + 3) y </> hline color 4 x (y + 3) </> hline color 4 x (y + 6))
+        | Nine      -> I.(hline color 4 x y </> vline color 3 x y </> hline color 4 x (y + 3) </> vline color 7 (x + 3) y)
+        | Dots      -> I.(draw color (x + 1) (y + 3) </> draw color (x + 1) (y + 6))
+        | Err       -> I.(hline color 4 x (y + 3))
 end
 
 type clock = {
@@ -148,9 +149,10 @@ let write_countdown ct =
 
 let display_status t ct x y =
     let open Primitives in
+    let open Notty.A in
     match ct.status with
-    | Off -> I.(hline 28 x y </> draw_text "00:00:00" (x + 29) y)
-    | Writing -> I.(hline 28 x y </> draw_text (write_countdown ct) (x + 29) y)
+    | Off -> I.(hline ~color:green 28 x y </> draw_text ~color:green "00:00:00" (x + 29) y)
+    | Writing -> I.(hline ~color:white 28 x y </> draw_text ~color:white (write_countdown ct) (x + 29) y)
     | On -> let cur = ct.target - (int_of_float t) in
             let (h, m, s) = format_h cur in
             let l = ((float_of_int ct.target) -. t) /. (float_of_int (ct.target - ct.start)) in
@@ -159,7 +161,7 @@ let display_status t ct x y =
             let ms = if m < 10 then "0" ^ string_of_int m else string_of_int m in
             let ss = if s < 10 then "0" ^ string_of_int s else string_of_int s in
             let fs = String.concat "" [hs; ":"; ms; ":"; ss] in
-            I.(hline n_s x y </> draw_text fs (x + 29) y)
+            I.(hline ~color:green n_s x y </> draw_text ~color:green fs (x + 29) y)
 
 let update_status ct x y = match ct.status with
     | Off -> display_status (-1.0) ct x y
@@ -167,15 +169,19 @@ let update_status ct x y = match ct.status with
     | On ->
             let t = (Unix.time ()) in
             if ct.target < (int_of_float t) then ct.status <- Off;
+            (* (* TODO: BELL SIGNAL *)
+            else if (ct.target - (int_of_float t)) < 5 then Printf.printf "\007Wake up!";
+            *)
             display_status t ct x y
 
 let display_time x y =
+    let open Notty.A in
     let t = Unix.localtime (Unix.time ()) in
     let h, m, s = (t.Unix.tm_hour, t.Unix.tm_min, t.Unix.tm_sec) in
     let h10, h1 = h/10, h mod 10 in
     let m10, m1 = m/10, m mod 10 in 
     let s10, s1 = s/10, s mod 10 in
-    I.(Numbers.(to_img x y (numbers h10) </> to_img (x + 5) y (numbers h1) </> to_img (x + 10) y (numbers (-1)) </> to_img (x + 14) y (numbers m10) </> to_img (x + 19) y (numbers m1) </> to_img (x + 24) y (numbers (-1)) </> to_img (x + 28) y (numbers s10) </> to_img (x + 33) y (numbers s1)))
+    I.(Numbers.(to_img ~color:green x y (numbers h10) </> to_img ~color:green (x + 5) y (numbers h1) </> to_img ~color:green (x + 10) y (numbers (-1)) </> to_img ~color:green (x + 14) y (numbers m10) </> to_img ~color:green (x + 19) y (numbers m1) </> to_img ~color:green (x + 24) y (numbers (-1)) </> to_img ~color:green (x + 28) y (numbers s10) </> to_img ~color:green (x + 33) y (numbers s1)))
 
 let timer () = Lwt_unix.sleep 1.0 >|= fun _ -> `Timer
 let event term = Lwt_stream.get (Term.events term) >|= function
@@ -185,7 +191,15 @@ let event term = Lwt_stream.get (Term.events term) >|= function
 let render term c ct =
     let ic = display_time c.x c.y in
     let ict = update_status ct c.x (c.y + 8) in
-    Term.image term I.(ic </> ict)
+    let t = Unix.time () in
+    let cur = ct.target - (int_of_float t) in
+    if ct.status = On && cur <= 5 then 
+        if cur mod 2 = 1 then
+            let bgi = I.(char A.(bg (rgb ~r:3 ~g:0 ~b:0)) ' ' (c.x * 2 + 40) (c.y * 2 + 9)) in
+            Term.image term I.(ic </> ict </> bgi)
+        else Term.image term I.(ic </> ict)
+    else
+        Term.image term I.(ic </> ict)
 
 let input c ct = function
     | 99 -> let f = function
