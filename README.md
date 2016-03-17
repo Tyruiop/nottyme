@@ -1,6 +1,6 @@
-![demo](https://tyruiop.org/~tyruiop/demo.gif)
-
 # Nottyme
+
+![demo](https://tyruiop.org/~tyruiop/demo.gif)
 
 ## A simple OCaml clock
 
