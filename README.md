@@ -12,4 +12,4 @@ Run to get time, press Enter to stop the clock. It does support resizing \o/. Pr
 
 ## Build
 
-Run make and then ./clock. You need `notty` and `lwt`.
+Run make and then `./nottyme`. You need `notty` and `lwt`.
