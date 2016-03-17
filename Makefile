@@ -1,5 +1,5 @@
 default:
-	ocamlfind ocamlc -package notty -package notty.lwt -package lwt -linkpkg -thread -o nottyme nottyme.ml
+	ocamlbuild -use-ocamlfind src/nottyme.native
 
 clean:
-	rm *.cmi *.cmo
+	ocamlbuild -clean

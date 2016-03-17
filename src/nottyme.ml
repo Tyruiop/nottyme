@@ -201,18 +201,6 @@ let render term c ct =
     else
         Term.image term I.(ic </> ict)
 
-let input c ct = function
-    | 99 -> let f = function
-                | Off -> Writing
-                | Writing ->
-                        let (h, m, s) = wtarget_to_target ct.wtarget in
-                        ct.target <- h*3600 + m*60 + s; trigger_countdown ct;
-                        On
-                | On -> Off
-        in
-        ct.status <- f ct.status
-    | _ -> ()
-
 let rec loop term c ct (e, t) =
     (e <?> t) >>= function
         | `End | `Key (`Enter, _) -> Lwt.return_unit
