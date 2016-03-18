@@ -153,35 +153,48 @@ let display_status t ct x y =
     match ct.status with
     | Off -> I.(hline ~color:green 28 x y </> draw_text ~color:green "00:00:00" (x + 29) y)
     | Writing -> I.(hline ~color:white 28 x y </> draw_text ~color:white (write_countdown ct) (x + 29) y)
-    | On -> let cur = ct.target - (int_of_float t) in
-            let (h, m, s) = format_h cur in
-            let l = ((float_of_int ct.target) -. t) /. (float_of_int (ct.target - ct.start)) in
-            let n_s = int_of_float (28.0 *. l) in
-            let hs = if h < 10 then "0" ^ string_of_int h else string_of_int h in
-            let ms = if m < 10 then "0" ^ string_of_int m else string_of_int m in
-            let ss = if s < 10 then "0" ^ string_of_int s else string_of_int s in
-            let fs = String.concat "" [hs; ":"; ms; ":"; ss] in
-            I.(hline ~color:green n_s x y </> draw_text ~color:green fs (x + 29) y)
+    | On ->
+        let tt = Unix.localtime t in
+        let h, m, s = (tt.Unix.tm_hour, tt.Unix.tm_min, tt.Unix.tm_sec) in
+        let hs = if h < 10 then "0" ^ string_of_int h else string_of_int h in
+        let ms = if m < 10 then "0" ^ string_of_int m else string_of_int m in
+        let ss = if s < 10 then "0" ^ string_of_int s else string_of_int s in
+        let fs = String.concat "" [hs; ":"; ms; ":"; ss] in
+        I.(draw_text ~color:green fs (x + 29) y)
 
 let update_status ct x y = match ct.status with
     | Off -> display_status (-1.0) ct x y
     | Writing -> display_status (-1.0) ct x y
     | On ->
             let t = (Unix.time ()) in
-            if ct.target < (int_of_float t) then ct.status <- Off;
+            if ct.target <= (int_of_float t) then ct.status <- Off;
             (* (* TODO: BELL SIGNAL *)
             else if (ct.target - (int_of_float t)) < 5 then Printf.printf "\007Wake up!";
             *)
             display_status t ct x y
 
-let display_time x y =
+let display_time ct x y =
     let open Notty.A in
-    let t = Unix.localtime (Unix.time ()) in
-    let h, m, s = (t.Unix.tm_hour, t.Unix.tm_min, t.Unix.tm_sec) in
-    let h10, h1 = h/10, h mod 10 in
-    let m10, m1 = m/10, m mod 10 in 
-    let s10, s1 = s/10, s mod 10 in
-    I.(Numbers.(to_img ~color:green x y (numbers h10) </> to_img ~color:green (x + 5) y (numbers h1) </> to_img ~color:green (x + 10) y (numbers (-1)) </> to_img ~color:green (x + 14) y (numbers m10) </> to_img ~color:green (x + 19) y (numbers m1) </> to_img ~color:green (x + 24) y (numbers (-1)) </> to_img ~color:green (x + 28) y (numbers s10) </> to_img ~color:green (x + 33) y (numbers s1)))
+    let t = Unix.time () in
+    let sdisp_time ct = match ct.status with
+        | Off | Writing -> 
+            let tt = Unix.localtime t in
+            let h, m, s = (tt.Unix.tm_hour, tt.Unix.tm_min, tt.Unix.tm_sec) in
+            let h10, h1 = h/10, h mod 10 in
+            let m10, m1 = m/10, m mod 10 in 
+            let s10, s1 = s/10, s mod 10 in
+            I.(Numbers.(to_img ~color:green x y (numbers h10) </> to_img ~color:green (x + 5) y (numbers h1) </> to_img ~color:green (x + 10) y (numbers (-1)) </> to_img ~color:green (x + 14) y (numbers m10) </> to_img ~color:green (x + 19) y (numbers m1) </> to_img ~color:green (x + 24) y (numbers (-1)) </> to_img ~color:green (x + 28) y (numbers s10) </> to_img ~color:green (x + 33) y (numbers s1)))
+        | On ->
+            let cur = ct.target - (int_of_float t) in
+            let (h, m, s) = format_h cur in
+            let l = ((float_of_int ct.target) -. t) /. (float_of_int (ct.target - ct.start)) in
+            let n_s = int_of_float (28.0 *. l) in
+            let h10, h1 = h/10, h mod 10 in
+            let m10, m1 = m/10, m mod 10 in 
+            let s10, s1 = s/10, s mod 10 in
+            I.(Numbers.(to_img ~color:green x y (numbers h10) </> to_img ~color:green (x + 5) y (numbers h1) </> to_img ~color:green (x + 10) y (numbers (-1)) </> to_img ~color:green (x + 14) y (numbers m10) </> to_img ~color:green (x + 19) y (numbers m1) </> to_img ~color:green (x + 24) y (numbers (-1)) </> to_img ~color:green (x + 28) y (numbers s10) </> to_img ~color:green (x + 33) y (numbers s1)) </> Primitives.hline ~color:green n_s x (y + 8))
+    in
+    sdisp_time ct
 
 let timer () = Lwt_unix.sleep 1.0 >|= fun _ -> `Timer
 let event term = Lwt_stream.get (Term.events term) >|= function
@@ -189,8 +202,8 @@ let event term = Lwt_stream.get (Term.events term) >|= function
     | None -> `End
 
 let render term c ct =
-    let ic = display_time c.x c.y in
     let ict = update_status ct c.x (c.y + 8) in
+    let ic = display_time ct c.x c.y in
     let t = Unix.time () in
     let cur = ct.target - (int_of_float t) in
     if ct.status = On && cur <= 5 then 
