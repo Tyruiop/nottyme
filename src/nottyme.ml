@@ -216,7 +216,7 @@ let render term c ct =
 
 let rec loop term c ct (e, t) =
     (e <?> t) >>= function
-        | `End | `Key (`Enter, _) -> Lwt.return_unit
+        | `End | `Key (`Uchar 113, _) -> Lwt.return_unit
         | `Key (`Uchar u, _) ->
                 (match u with
                     | 99 -> let f = function
