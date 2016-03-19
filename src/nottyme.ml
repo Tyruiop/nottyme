@@ -15,15 +15,15 @@ let rec makelist n v =
 
 module Primitives : sig
     val draw : color:Notty.A.color -> int -> int -> Notty.image
-    val draw_text : color:Notty.A.color -> string -> int -> int -> Notty.image
+    val draw_text : bgc:Notty.A.color -> fgc:Notty.A.color -> string -> int -> int -> Notty.image
     val hline : color:Notty.A.color -> int -> int -> int -> Notty.image
     val vline : color:Notty.A.color -> int -> int -> int -> Notty.image
 end = struct
     let draw ~color x y =
         I.(string A.(fg color) square |> hpad x 0 |> vpad y 0)
 
-    let draw_text ~color s x y =
-        I.(string A.(fg color) s |> hpad x 0 |> vpad y 0)
+    let draw_text ~bgc ~fgc s x y =
+        I.(string A.(fg fgc ++ bg bgc) s |> hpad x 0 |> vpad y 0)
 
     let hline ~color n x y =
         let s = String.concat "" (makelist n square) in
@@ -151,8 +151,8 @@ let display_status t ct x y =
     let open Primitives in
     let open Notty.A in
     match ct.status with
-    | Off -> I.(hline ~color:green 28 x y </> draw_text ~color:green "00:00:00" (x + 29) y)
-    | Writing -> I.(hline ~color:white 28 x y </> draw_text ~color:white (write_countdown ct) (x + 29) y)
+    | Off -> I.(hline ~color:green 28 x y </> draw_text ~fgc:green ~bgc:black "00:00:00" (x + 29) y)
+    | Writing -> I.(hline ~color:white 28 x y </> draw_text ~fgc:white ~bgc:black (write_countdown ct) (x + 29) y)
     | On ->
         let tt = Unix.localtime t in
         let h, m, s = (tt.Unix.tm_hour, tt.Unix.tm_min, tt.Unix.tm_sec) in
@@ -160,7 +160,14 @@ let display_status t ct x y =
         let ms = if m < 10 then "0" ^ string_of_int m else string_of_int m in
         let ss = if s < 10 then "0" ^ string_of_int s else string_of_int s in
         let fs = String.concat "" [hs; ":"; ms; ":"; ss] in
-        I.(draw_text ~color:green fs (x + 29) y)
+        let cur = ct.target - (int_of_float t) in
+        if ct.status = On && cur <= 5 then 
+            if cur mod 2 = 1 then
+                I.(draw_text ~fgc:green ~bgc:(rgb ~r:3 ~g:0 ~b:0) fs (x + 29) y)
+            else
+                I.(draw_text ~fgc:green ~bgc:black fs (x + 29) y)
+        else
+            I.(draw_text ~fgc:green ~bgc:black fs (x + 29) y)
 
 let update_status ct x y = match ct.status with
     | Off -> display_status (-1.0) ct x y
